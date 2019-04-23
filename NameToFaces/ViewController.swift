@@ -19,6 +19,23 @@ class ViewController: UICollectionViewController, UINavigationControllerDelegate
         
         navigationItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(addNewPerson))
         
+        let defaults = UserDefaults.standard
+        
+        if let savedPeople = defaults.object(forKey: "people") as? Data {
+            if let decodedPeople = try? NSKeyedUnarchiver.unarchiveTopLevelObjectWithData(savedPeople) as? [Person] {
+                people = decodedPeople ?? [Person]()
+            }
+        }
+        
+        if let savedPeople = defaults.object(forKey: "people") as? Data {
+            let jsonDecoder = JSONDecoder()
+            
+            do {
+                people = try jsonDecoder.decode([Person].self, from: savedPeople)
+            } catch {
+                print("Failed to load people.")
+            }
+        }
     }
     
     // MARK: - Private
@@ -32,6 +49,28 @@ class ViewController: UICollectionViewController, UINavigationControllerDelegate
     func getsDocumentsDirectory() -> URL {
         let paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
         return paths[0]
+    }
+    
+    
+    //One way
+    func save() {
+        if let savedData = try? NSKeyedArchiver.archivedData(withRootObject: people, requiringSecureCoding: false) {
+            let defaults = UserDefaults.standard
+            defaults.setValue(savedData, forKey: "people")
+        }
+    }
+    
+    //Alternate way
+    
+    func saveAlternateWay() {
+        let jsonEncoder = JSONEncoder()
+        
+        if let savedData = try? jsonEncoder.encode(people) {
+            let defaults = UserDefaults.standard
+            defaults.setValue(savedData, forKey: "people")
+        } else {
+            print("Failed to save people.")
+        }
     }
 
 }
@@ -75,6 +114,8 @@ extension ViewController {
             
             guard let newName = ac?.textFields?[0].text else { return }
             person.name = newName
+            //self?.save()
+            self?.saveAlternateWay()
             self?.collectionView.reloadData()
         }
         
@@ -99,6 +140,8 @@ extension ViewController: UIImagePickerControllerDelegate {
         
         let person = Person(name: "Unknown", image: imageName)
         people.append(person)
+        //save()
+        saveAlternateWay()
         collectionView.reloadData()
         
         dismiss(animated: true)
